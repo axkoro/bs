@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,c
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,visualstudiocode,c
 
+bin/
+testbench/
+
 ### C ###
 # Prerequisites
 *.d
@@ -89,12 +92,7 @@ Temporary Items
 *.icloud
 
 ### VisualStudioCode ###
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
+.vscode/
 
 # Local History for Visual Studio Code
 .history/
