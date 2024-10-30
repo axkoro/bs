@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "uebung1"
+		},
+		{
+			"path": "uebung2"
+		}
+	],
+	"settings": {
+		"terminal.integrated.cwd": "${workspaceFolder:uebung1}"
+	}
+}
