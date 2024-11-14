@@ -3,6 +3,7 @@
 
 bin/
 testbench/
+*.zip
 
 ### C ###
 # Prerequisites
