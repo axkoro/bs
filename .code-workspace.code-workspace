@@ -11,6 +11,6 @@
 		}
 	],
 	"settings": {
-		"terminal.integrated.cwd": "${workspaceFolder:uebung1}"
+		"terminal.integrated.cwd": "${workspaceFolder:uebung2}"
 	}
 }
