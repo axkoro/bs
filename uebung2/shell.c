@@ -13,6 +13,8 @@
 
 #define PATH_MAX 4096
 
+// TODO: Funktionen auslagern
+
 int cd_sh() {
 	return 0;
 }
@@ -49,6 +51,7 @@ int main(void) {
 		char* arg = strtok(NULL, " \n");
 		// printf("command: %s\narg: %s\n", command, arg);
 		// TODO: clear after exec
+		// TODO: accept multiple arguments
 
 		if (strcmp(command, "cd") == 0) {
 			char path[PATH_MAX];
@@ -67,7 +70,7 @@ int main(void) {
 			}
 		} else if (strcmp(command, "exit") == 0) {
 			exit_sh();
-		} else { // Dateien ausführen
+		} else { // TODO: Dateien ausführen
 			// Entweder synchron oder asynchron (tracing '&') -> waitpid(fork())
 			// fork();
 			// execv();
