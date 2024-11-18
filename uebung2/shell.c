@@ -55,13 +55,16 @@ int main(void) {
 
 		if (strcmp(command, "cd") == 0) {
 			char path[PATH_MAX];
-			snprintf(path, sizeof(path), "%s/%s", cwd, arg);
+
+			if (arg[0] == '/') { // absolute path
+				snprintf(path, sizeof(path), "%s", arg);
+			} else { // relative path
+				snprintf(path, sizeof(path), "%s/%s", cwd, arg);
+			}
 
 			if (chdir(path) != 0) {
 				perror("chdir failed");
 			}
-
-			// TODO: handle . and ..
 		} else if (strcmp(command, "wait") == 0) { // TODO: sobald Programmausführung und unäres & abschlossen (ermöglicht Test)
 			pid_t pid = atoi(arg);
 			int status;
@@ -70,10 +73,17 @@ int main(void) {
 			}
 		} else if (strcmp(command, "exit") == 0) {
 			exit_sh();
-		} else { // TODO: Dateien ausführen
-			// Entweder synchron oder asynchron (tracing '&') -> waitpid(fork())
-			// fork();
-			// execv();
+		} else { // Execute files
+			// pid_t child = fork();
+			// if (child == 0) {
+			// 	int status;
+			// 	waitpid(child, &status, 0);
+			// 	break;
+			// } else {
+			// 	execv(command, arg);
+			// 	exit(-1);
+			// }
+			// TODO: asynchrones Ausführen (tracing '&') -> waitpid(fork())
 		}
 	}
 	return 0;
