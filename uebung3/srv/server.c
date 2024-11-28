@@ -1,14 +1,127 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
 
 #define PORT 9000
 
-int main() {
-	while (1) {
-		printf("[srv]: idle\n");
-		sleep(2);
+#define PATH_MAX 4096
+#define ARGS_MAX 8
+
+int initializeServerSocket() {
+	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+	int sockopt = 1;
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&sockopt, sizeof(sockopt)); // enable immediate reuse of this port after closing the socket
+	setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char*)&sockopt, sizeof(sockopt)); // disable delayed tcp segments
+
+	struct sockaddr_in srv_addr = {
+		.sin_family = AF_INET,
+		.sin_port = htons(PORT),
+		.sin_addr.s_addr = INADDR_ANY
+	};
+
+	bind(sockfd, (struct sockaddr*)&srv_addr, sizeof(struct sockaddr_in));
+
+	listen(sockfd, 0);
+
+	return sockfd;
+}
+
+void writePrompt(int fd) {
+	char* cwd = getcwd(NULL, 0);
+	char prompt[strlen(cwd) + 3];
+	snprintf(prompt, sizeof(prompt), "%s> ", cwd);
+	write(fd, prompt, strlen(prompt) + 1); // +1 to full null-terminated string
+	free(cwd);
+}
+
+/**
+ * Reads a command from the given file descriptor and parses its arguments.
+ *
+ * @param fd   The file descriptor to read the command from.
+ * @param buf  A buffer to store the command read from the file descriptor.
+ * @param args An array to store the parsed arguments. args[0] holds the command itself and the last value is NULL (see argv[] for exec() in POSIX).
+ * @return     The number of arguments parsed.
+ */
+int readCommand(int fd, char* buf, size_t buf_len, char* args[], size_t args_len) {
+	read(fd, buf, buf_len);
+
+	args[0] = strtok(buf, " \n");
+
+	char* arg;
+	int i = 1;
+	while ((arg = strtok(NULL, " \n")) != NULL) {
+		args[i++] = arg;
 	}
-	
+	args[i] = NULL;
+
+	int argc = i - 1;
+	return argc;
+}
+
+int main() {
+	int sockfd = initializeServerSocket();
+
+	struct sockaddr_in cli_addr;
+	socklen_t addr_len = sizeof(struct sockaddr_in);
+	int cli = accept(sockfd, (struct sockaddr*)&cli_addr, &addr_len);
+
+	char msg[] = "Connection established!\n";
+	write(cli, msg, sizeof(msg));
+
+	// Shell
+	while (1) {
+		writePrompt(cli);
+
+		char command_buf[BUFSIZ];
+		char* args[ARGS_MAX];
+		readCommand(cli, command_buf, sizeof(command_buf), args, sizeof(args));
+		char* command = args[0];
+
+		if (!strcmp(command, "exit")) {
+			shutdown(cli, SHUT_RDWR);
+			close(cli);
+			exit(0);
+		} else if (!strcmp(command, "cd")) {
+			char path[PATH_MAX];
+
+			if (args[1][0] == '/') { // absolute path
+				snprintf(path, sizeof(path), "%s", args[1]);
+			} else { // relative path
+				char* cwd = getcwd(NULL, 0);
+				snprintf(path, sizeof(path), "%s/%s", cwd, args[1]);
+				free(cwd);
+			}
+
+			if (chdir(path) != 0)
+				perror("chdir failed");
+		} else if (!strcmp(command, "get")) { // TODO:
+
+		} else if (!strcmp(command, "put")) { // TODO:
+
+		} else { // execute file
+			int monitored_process = fork();
+			if (monitored_process == 0) {
+				execvp(command, args);
+				perror("exec failed");
+				exit(-1);
+			} else {
+				int status;
+				waitpid(monitored_process, &status, 0);
+			}
+		}
+	}
+
+	// Close connection
+	shutdown(cli, SHUT_RDWR);
+	close(cli);
+
 	return 0;
 }
