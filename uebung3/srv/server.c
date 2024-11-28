@@ -105,7 +105,9 @@ int main() {
 		} else if (!strcmp(command, "get")) { // TODO:
 
 		} else if (!strcmp(command, "put")) { // TODO:
-
+			// open file (if nonexistent)
+			// confirm ready to receive
+			// read from socket
 		} else { // execute file
 			int monitored_process = fork();
 			if (monitored_process == 0) {

@@ -44,10 +44,28 @@ int main() {
 		printf("%s", recvBuf);
 		fflush(stdout);
 
-		// send stdin to server
-		char inputBuf[BUFSIZ];
-		read(STDIN_FILENO, inputBuf, sizeof(inputBuf));
-		write(srv, inputBuf, strlen(inputBuf));
+		// read user input
+		char input_buf[BUFSIZ];
+		read(STDIN_FILENO, input_buf, sizeof(input_buf));
+
+		char* command = strtok(input_buf, " \n");
+		char* filename = strtok(NULL, " \n");
+
+		if (!strcmp(command, "put")) {
+			// send command
+			// wait for response?
+			// open file
+			// send file size
+			// send file contents
+		} else if (!strcmp(command, "get")) {
+			// send command
+			// wait for response?
+			// read file size
+			// open file (according to size?)
+			// read file contents into file
+		} else {
+			write(srv, input_buf, strlen(input_buf));
+		}
 	}
 
 	// Close connection
