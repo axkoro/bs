@@ -1,3 +1,5 @@
+#include "protocol.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -26,46 +28,57 @@ int intializeClientSocket() {
 
 int main() {
 	setvbuf(stdin, NULL, _IOLBF, BUFSIZ);
-	setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
 
 	int srv = intializeClientSocket();
 
-	char recvBuf[BUFSIZ];
-
-	// "Connection established"
-	read(srv, recvBuf, sizeof(recvBuf));
-	printf("%s", recvBuf);
-
 	while (1) {
-		if (read(srv, recvBuf, sizeof(recvBuf)) == 0) {
+		char msg_type;
+
+		if (read(srv, &msg_type, 1) == 0) {
 			printf("Server has closed the connection.\n");
 			break;
 		}
-		printf("%s", recvBuf);
-		fflush(stdout);
 
-		// read user input
-		char input_buf[BUFSIZ];
-		read(STDIN_FILENO, input_buf, sizeof(input_buf));
+		char recvBuf[BUFSIZ];
+		if (msg_type == MSG_OUTPUT) {
+			read(srv, recvBuf, sizeof(recvBuf));
+			printf("%s", recvBuf);
+			fflush(stdout);
+		} else if (msg_type == MSG_PROMPT) {
+			read(srv, recvBuf, sizeof(recvBuf));
+			printf("%s", recvBuf); // print prompt
+			fflush(stdout);
 
-		char* command = strtok(input_buf, " \n");
-		char* filename = strtok(NULL, " \n");
+			// read user input
+			char input_buf[BUFSIZ];
+			read(STDIN_FILENO, input_buf, sizeof(input_buf));
 
-		if (!strcmp(command, "put")) {
-			// send command
-			// wait for response?
-			// open file
-			// send file size
-			// send file contents
-		} else if (!strcmp(command, "get")) {
-			// send command
-			// wait for response?
-			// read file size
-			// open file (according to size?)
-			// read file contents into file
-		} else {
-			write(srv, input_buf, strlen(input_buf));
+			char* command = strtok(input_buf, " \n");
+			char* filename = strtok(NULL, " \n");
+
+			if (!strcmp(command, "put")) {
+				// send command
+				// wait for response?
+				// open file
+				// send file size
+				// send file contents
+			} else if (!strcmp(command, "get")) {
+				// send command
+				// wait for response?
+				// read file size
+				// open file (according to size?)
+				// read file contents into file
+			} else {
+				write(srv, input_buf, strlen(input_buf));
+			}
 		}
+
+
+
+
+
+
+
 	}
 
 	// Close connection

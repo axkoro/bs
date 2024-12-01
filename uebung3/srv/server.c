@@ -1,3 +1,5 @@
+#include "protocol.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -36,10 +38,20 @@ int initializeServerSocket() {
 
 void writePrompt(int fd) {
 	char* cwd = getcwd(NULL, 0);
-	char prompt[strlen(cwd) + 3];
-	snprintf(prompt, sizeof(prompt), "%s> ", cwd);
+
+	char prompt[strlen(cwd) + 4]; // + msg_type + '>' + ' ' + string terminator
+	snprintf(prompt, sizeof(prompt), "%c%s> ", MSG_PROMPT, cwd); // prefix prompt with message type indicator
+
 	write(fd, prompt, strlen(prompt) + 1); // +1 to full null-terminated string
+
 	free(cwd);
+}
+
+void writeOutput(int fd, char* msg) {
+	char prefixed_msg[strlen(msg) + 2]; // + msg_type + string terminator
+	snprintf(prefixed_msg, sizeof(prefixed_msg), "%c%s", MSG_OUTPUT, msg); // prefix msg with message type indicator
+
+	write(fd, prefixed_msg, sizeof(prefixed_msg) + 1);
 }
 
 /**
@@ -74,7 +86,7 @@ int main() {
 	int cli = accept(sockfd, (struct sockaddr*)&cli_addr, &addr_len);
 
 	char msg[] = "Connection established!\n";
-	write(cli, msg, sizeof(msg));
+	writeOutput(cli, msg);
 
 	// Shell
 	while (1) {
@@ -112,7 +124,6 @@ int main() {
 			int monitored_process = fork();
 			if (monitored_process == 0) {
 				execvp(command, args);
-				perror("exec failed");
 				exit(-1);
 			} else {
 				int status;
