@@ -3,6 +3,11 @@
 
 *.zip
 
+# Exclude executables
+*
+!*.*
+!*/
+
 ### C ###
 # Prerequisites
 *.d

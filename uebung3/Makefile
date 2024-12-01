@@ -32,7 +32,7 @@ client: $(CLIENT_OBJ) $(LIB)
 	$(CC) -o $@ $^ $(LFLAGS)
 
 server: $(SERVER_OBJ) $(LIB)
-	@if [ -e .srv_pid ]; then kill `cat .srv_pid`; $(RM) $(RMFILES) .srv_pid; fi
+	@if [ -e srv_pid.txt ]; then kill `cat srv_pid.txt`; $(RM) $(RMFILES) srv_pid.txt; fi
 	$(CC) -o $@ $^ $(LFLAGS)
 
 libshared.a: $(SHARED_OBJ)
@@ -40,15 +40,15 @@ libshared.a: $(SHARED_OBJ)
 
 all: $(TAR)
 
-.srv_pid: server
+srv_pid.txt: server
 	./server& echo $$! > $@
 
-run: all .srv_pid
+run: all srv_pid.txt
 	./client
 
 pack: clean
 	zip -r $(PCK) cli srv lib Makefile -x "*/.*"
 
 clean:
-	@[ -e .srv_pid ] && kill `cat .srv_pid` || true
-	$(RM) $(RMFILES) .srv_pid $(TAR) $(PCK) $(CLIENT_OBJ) $(CLIENT_DEP) $(SERVER_OBJ) $(SERVER_DEP) $(SHARED_OBJ) $(SHARED_DEP)
+	@[ -e srv_pid.txt ] && kill `cat srv_pid.txt` || true
+	$(RM) $(RMFILES) srv_pid.txt $(TAR) $(PCK) $(CLIENT_OBJ) $(CLIENT_DEP) $(SERVER_OBJ) $(SERVER_DEP) $(SHARED_OBJ) $(SHARED_DEP)
