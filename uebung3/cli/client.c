@@ -54,7 +54,6 @@ int main() {
 			read(STDIN_FILENO, input_buf, sizeof(input_buf));
 
 			char* command = strtok(input_buf, " \n");
-			char* filename = strtok(NULL, " \n");
 
 			if (!strcmp(command, "put")) {
 				// send command
@@ -69,16 +68,10 @@ int main() {
 				// open file (according to size?)
 				// read file contents into file
 			} else {
+				input_buf[strlen(command)] = ' '; // remove NULL-character set by strok
 				write(srv, input_buf, strlen(input_buf));
 			}
 		}
-
-
-
-
-
-
-
 	}
 
 	// Close connection
