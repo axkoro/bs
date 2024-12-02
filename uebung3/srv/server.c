@@ -1,17 +1,20 @@
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "protocol.h"
 
-#define PORT 9000
+#define PORT 9007
 
 #define PATH_MAX 4096
 #define ARGS_MAX 8
@@ -85,11 +88,10 @@ int readCommand(int fd, char* buf, size_t buf_len, char* args[], size_t args_len
     int argc = i - 1;
     return argc;
 }
-void handleClient(void* arg) {
+
+void* handleClient(void* arg) {
     int cli = *(int*)arg;
     free(arg);
-    char msg[] = "Connection established!\n";
-    writeOutput(cli, msg);
 
     // Shell
     while (1) {
@@ -116,12 +118,38 @@ void handleClient(void* arg) {
             }
 
             if (chdir(path) != 0) perror("chdir failed");
-        } else if (!strcmp(command, "get")) {  // TODO:
 
-        } else if (!strcmp(command, "put")) {  // TODO:
-                                               // open file (if nonexistent)
-                                               // confirm ready to receive
-                                               // read from socket
+        } else if (!strcmp(command, "put")) {
+            char* file_path =
+                args[1];  // TODO: extract file name ("put dir/file.txt" should take this file from
+                          // the client-path but put it the cwd of server)
+
+            int file = open(file_path, O_WRONLY | O_CREAT);
+            fchmod(file, 0644);
+
+            char msg_commence = PUT_COMMENCE;
+            write(cli, &msg_commence, sizeof(char));
+
+            size_t expected_size;
+            read(cli, &expected_size, sizeof(expected_size));
+
+            char recv_buf[BUFSIZ];
+            size_t bytes_received = 0;
+            while (bytes_received < expected_size) {
+                int n_bytes = read(cli, recv_buf, sizeof(recv_buf));
+                if (n_bytes <= 0) {
+                    printf("put: Error during transmission");
+                    break;
+                }
+                if (write(file, recv_buf, n_bytes) < 0) {
+                    printf("put: Error writing to file");
+                    break;
+                }
+                bytes_received += n_bytes;
+            }
+
+            close(file);
+        } else if (!strcmp(command, "get")) {  // TODO:
         } else {                               // execute file
             int monitored_process = fork();
             if (monitored_process == 0) {
@@ -139,20 +167,27 @@ void handleClient(void* arg) {
     close(cli);
 
     pthread_exit(NULL);
+
+    return NULL;
 }
 
 int main() {
     int sockfd = initializeServerSocket();
+
     while (1) {
         struct sockaddr_in cli_addr;
         socklen_t addr_len = sizeof(struct sockaddr_in);
         int cli = accept(sockfd, (struct sockaddr*)&cli_addr, &addr_len);
+
         int* pcli = malloc(sizeof(int));
         *pcli = cli;
+
         pthread_t tid;
         pthread_create(&tid, NULL, handleClient, pcli);
         pthread_detach(tid);
     }
+
     close(sockfd);
+
     return 0;
 }
