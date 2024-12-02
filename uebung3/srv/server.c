@@ -124,8 +124,7 @@ void* handleClient(void* arg) {
                 args[1];  // TODO: extract file name ("put dir/file.txt" should take this file from
                           // the client-path but put it the cwd of server)
 
-            int file = open(file_path, O_WRONLY | O_CREAT);
-            fchmod(file, 0644);
+            int file = open(file_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
             char msg_commence = PUT_COMMENCE;
             write(cli, &msg_commence, sizeof(char));
