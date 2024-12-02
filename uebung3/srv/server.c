@@ -85,11 +85,11 @@ int readCommand(int fd, char* buf, size_t buf_len, char* args[], size_t args_len
     int argc = i - 1;
     return argc;
 }
-void handleClient(void *arg){
-	int cli = *(int*)arg;
-	free(arg);
-	char msg[] = "Connection established!\n";
-	writeOutput(cli, msg);
+void handleClient(void* arg) {
+    int cli = *(int*)arg;
+    free(arg);
+    char msg[] = "Connection established!\n";
+    writeOutput(cli, msg);
 
     // Shell
     while (1) {
@@ -138,23 +138,21 @@ void handleClient(void *arg){
     shutdown(cli, SHUT_RDWR);
     close(cli);
 
-	pthread_exit(NULL);	
-	
+    pthread_exit(NULL);
 }
 
 int main() {
-	int sockfd = initializeServerSocket();
-while(1){
-	struct sockaddr_in cli_addr;
-	socklen_t addr_len = sizeof(struct sockaddr_in);
-	int cli = accept(sockfd, (struct sockaddr*)&cli_addr, &addr_len);
-	int* pcli = malloc(sizeof(int));
-	*pcli = cli;
-	pthread_t tid;
-	pthread_create(&tid, NULL, handleClient, pcli);
-	pthread_detach(tid);
-
-}
-close(sockfd);
-	return 0;
+    int sockfd = initializeServerSocket();
+    while (1) {
+        struct sockaddr_in cli_addr;
+        socklen_t addr_len = sizeof(struct sockaddr_in);
+        int cli = accept(sockfd, (struct sockaddr*)&cli_addr, &addr_len);
+        int* pcli = malloc(sizeof(int));
+        *pcli = cli;
+        pthread_t tid;
+        pthread_create(&tid, NULL, handleClient, pcli);
+        pthread_detach(tid);
+    }
+    close(sockfd);
+    return 0;
 }
