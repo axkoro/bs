@@ -56,13 +56,13 @@ void writePrompt(int fd) {
     free(cwd);
 }
 
-void writeOutput(int fd, char* msg) {
-    char prefixed_msg[strlen(msg) + 2];  // + msg_type + string terminator
-    snprintf(prefixed_msg, sizeof(prefixed_msg), "%c%s", MSG_OUTPUT,
-             msg);  // prefix msg with message type indicator
+// void writeOutput(int fd, char* msg) {
+//     char prefixed_msg[strlen(msg) + 2];  // + msg_type + string terminator
+//     snprintf(prefixed_msg, sizeof(prefixed_msg), "%c%s", MSG_OUTPUT,
+//              msg);  // prefix msg with message type indicator
 
-    write(fd, prefixed_msg, sizeof(prefixed_msg) + 1);
-}
+//     write(fd, prefixed_msg, sizeof(prefixed_msg) + 1);
+// }
 
 /**
  * Reads a command from the given file descriptor and parses its arguments.
@@ -152,6 +152,7 @@ void* handleClient(void* arg) {
         } else {                               // execute file
             int monitored_process = fork();
             if (monitored_process == 0) {
+                dup2(cli, STDOUT_FILENO);
                 execvp(command, args);
                 exit(-1);
             } else {

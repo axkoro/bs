@@ -38,11 +38,8 @@ int main() {
         }
 
         char recv_buf[BUFSIZ];
-        if (msg_type == MSG_OUTPUT) {
-            read(srv, recv_buf, sizeof(recv_buf));
-            printf("%s", recv_buf);
-            fflush(stdout);
-        } else if (msg_type == MSG_PROMPT) {
+        if (msg_type == MSG_PROMPT) {  // FIXME: prompt mode is wrongly entered when the first two
+                                       // bytes of (non-prompt) output match those of MSG_PROMPT
             read(srv, recv_buf, sizeof(recv_buf));
             printf("%s", recv_buf);  // print prompt
             fflush(stdout);
@@ -93,6 +90,11 @@ int main() {
                 input_buf[strlen(command)] = ' ';  // remove NULL-character set by strok
                 write(srv, input_buf, strlen(input_buf));
             }
+        } else {  // output from the shell
+            read(srv, recv_buf, sizeof(recv_buf));
+            printf("%c%s", msg_type,
+                   recv_buf);  // msg_type is actually the first byte of the output again
+            fflush(stdout);
         }
     }
 
