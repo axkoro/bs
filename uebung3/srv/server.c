@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -29,7 +30,14 @@ int initializeServerSocket() {
 		.sin_addr.s_addr = INADDR_ANY
 	};
 
-	bind(sockfd, (struct sockaddr*)&srv_addr, sizeof(struct sockaddr_in));
+	if (bind(sockfd, (struct sockaddr*)&srv_addr, sizeof(struct sockaddr_in)) < 0) {
+		printf("Couldn't bind to address");
+		if (errno == EADDRINUSE)
+			printf(": Adress already in use");
+		fflush(stdout);
+
+		exit(-1);
+	}
 
 	listen(sockfd, 0);
 
