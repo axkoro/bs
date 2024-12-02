@@ -37,9 +37,6 @@ int main() {
             break;
         }
 
-        printf("msg-type: %d\n", (short)msg_type);
-        fflush(stdout);
-
         char recv_buf[BUFSIZ];
         if (msg_type == MSG_OUTPUT) {
             read(srv, recv_buf, sizeof(recv_buf));
@@ -75,7 +72,7 @@ int main() {
                     char file_buf[BUFSIZ];
                     int n_bytes = 0;
                     do {
-                        int n_bytes = read(file, file_buf, sizeof(file_buf));
+                        n_bytes = read(file, file_buf, sizeof(file_buf));
                         write(srv, file_buf, n_bytes);
                     } while (n_bytes > 0);
 
