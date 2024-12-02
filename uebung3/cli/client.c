@@ -1,9 +1,11 @@
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "protocol.h"
@@ -35,14 +37,14 @@ int main() {
             break;
         }
 
-        char recvBuf[BUFSIZ];
+        char recv_buf[BUFSIZ];
         if (msg_type == MSG_OUTPUT) {
-            read(srv, recvBuf, sizeof(recvBuf));
-            printf("%s", recvBuf);
+            read(srv, recv_buf, sizeof(recv_buf));
+            printf("%s", recv_buf);
             fflush(stdout);
         } else if (msg_type == MSG_PROMPT) {
-            read(srv, recvBuf, sizeof(recvBuf));
-            printf("%s", recvBuf);  // print prompt
+            read(srv, recv_buf, sizeof(recv_buf));
+            printf("%s", recv_buf);  // print prompt
             fflush(stdout);
 
             // read user input
@@ -55,10 +57,28 @@ int main() {
                 input_buf[strlen(command)] = ' ';  // remove NULL-character set by strok
                 write(srv, input_buf, strlen(input_buf));
 
-                // wait for response?
-                // open file
-                // send file size
-                // send file contents
+                read(srv, &msg_type, 1);
+
+                if (msg_type == PUT_COMMENCE) {
+                    char* file_path = strtok(NULL, " \n");
+                    int file = open(file_path, O_RDONLY);
+                    if (file < 0) printf("put: Couldn't open file");
+
+                    struct stat file_stats;
+                    fstat(file, &file_stats);
+                    off_t size = file_stats.st_size;
+                    write(srv, &size, sizeof(off_t));
+
+                    char file_buf[BUFSIZ];
+                    int n_bytes = read(file, file_buf, sizeof(file_buf));
+                    while (n_bytes > 0) write(srv, file_buf, n_bytes);
+
+                    char msg_eof = PUT_EOF;
+                    write(srv, &msg_eof, sizeof(msg_eof));
+                } else {
+                    printf("put: Server didn't accept");
+                }
+
             } else if (!strcmp(command, "get")) {
                 input_buf[strlen(command)] = ' ';  // remove NULL-character set by strok
                 write(srv, input_buf, strlen(input_buf));
