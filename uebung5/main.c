@@ -77,6 +77,25 @@ int main(void) {
     mem_dump(file);
     fprintf(file, "\n");
 
+    // Cleanup
+    mem_free(p4);
+    mem_free(p5);
+
+    // 9. Maximal fragmentation
+    fprintf(file, "[Maximal fragmentation]\n");
+    int num_blocks = 1024;
+    char* ptr = mem_alloc(1);
+    for (int i = 1; i < num_blocks; i++) {
+        mem_alloc(1);
+    }
+    for (int i = 0; i < num_blocks; i += 2) {
+        mem_free(ptr + i * 64);
+    }
+    mem_dump(file);
+    // would require 2 pages but no contiguos memory of that size is available:
+    assert(NULL == mem_alloc(64));
+    fprintf(file, "\n");
+
     fprintf(file, "All tests completed successfully.\n");
     return 0;
 }
