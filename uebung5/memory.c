@@ -1,5 +1,3 @@
-// memory.c
-
 #include "memory.h"
 
 #include <errno.h>

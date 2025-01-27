@@ -64,7 +64,6 @@ int main(void) {
     void* p6 = mem_realloc(p5, 1600);
     assert(p6 != NULL);
     // check that data was copied
-    // (just spot-check if the pattern is still there)
     unsigned char* checkBytes = (unsigned char*)p6;
     for (int i = 0; i < 800; i++) {
         assert(checkBytes[i] == 0xAB);
