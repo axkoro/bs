@@ -1,146 +1,170 @@
+// memory.c
+
 #include "memory.h"
 
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>  // for memcpy
 
 #include "bitset.h"
 
-/**@brief Order of the largest possible memory block. */
 #define ORDER_MAX 10
-
-/**@brief Size of the smallest possible memory block. */
 #define PAGE_SIZE 64
-
-/**@brief Size of available memory. */
 #define HEAP_SIZE (PAGE_SIZE << ORDER_MAX)
-
-/**@brief Size of the header prepended to every block (invisible to user). */
 #define HEADER_SIZE 1
-
 #define NUM_BLOCKS (HEAP_SIZE / PAGE_SIZE)
 
-/**@brief Heap memory. */
 static char heap[HEAP_SIZE];
-
 static Bitset blocks[NUM_BLOCKS];
 
-static char calc_order(size_t size) {
-    size_t needed_size = size + HEADER_SIZE;
-    int req_pages = (needed_size + PAGE_SIZE - 1) / PAGE_SIZE;
-    // = ceil(needed_size / PAGE_SIZE)
+/**
+ * Calculate the smallest order such that 2^order pages can accommodate the requested size.
+ */
+static char calculate_order(size_t size) {
+    size_t total_size = size + HEADER_SIZE;
+    int required_pages = (total_size + PAGE_SIZE - 1) / PAGE_SIZE;
 
     char order = 0;
-    int power_of_two = 1;
-    while (power_of_two < req_pages) {
-        power_of_two <<= 1;
+    while ((1 << order) < required_pages && order < ORDER_MAX) {
         order++;
     }
 
     return order;
 }
 
-static bool is_free(Bitset *blocks, int block_idx, int block_size) {
-    for (int i = block_idx; i < block_idx + block_size; i++) {
-        if (bitsetGet(blocks, i)) {
+/**
+ * Check if a range of pages is free.
+ */
+static bool is_range_free(const Bitset *bits, int start, int length) {
+    for (int i = 0; i < length; i++) {
+        if (bitsetGet(bits, start + i)) {
             return false;
         }
     }
     return true;
 }
 
-/* @brief Finds the block order of a free block.
- * @param block_idx The first page index of a block.
+/**
+ * Determine the largest buddy-aligned free block starting at a given index.
+ * Returns the order of the block or -1 if not free or misaligned.
  */
-static char get_block_order(Bitset *blocks, int block_idx) {
-    if (!is_free(blocks, block_idx, 1)) return -1;
-
-    char order = 0;
-    int step_size = 1;
-    while (block_idx + step_size < NUM_BLOCKS && is_free(blocks, block_idx, step_size)) {
-        // TODO: halve compares by removing multiple checks for the first pages of a block
-        // while (block_idx + 2 * step_size < NUM_BLOCKS && is_free(blocks, block_idx + step_size,
-        // step_size))
-
-        // TODO: prune by checking if best_order is already better & by starting from req_blocks
-        // (instead of 1)
-
-        // FIXME: might give too large orders when finding consecutive free pages that aren't
-        // necessarily in one block
-
-        order++;
-        step_size <<= 1;
+static char find_buddy_order(const Bitset *bits, int index) {
+    if (index < 0 || index >= NUM_BLOCKS || bitsetGet(bits, index)) {
+        return -1;
     }
 
-    order--;
-    return order;
+    char order = 0;
+    while (order <= ORDER_MAX) {
+        int block_size = 1 << order;
+
+        if (index % block_size != 0 || (index + block_size) > NUM_BLOCKS) {
+            break;
+        }
+
+        if (!is_range_free(bits, index, block_size)) {
+            break;
+        }
+
+        order++;
+    }
+
+    return (order > 0) ? (order - 1) : -1;
 }
 
-void mem_init() { bitsetInit(blocks, NUM_BLOCKS, 0); }
+void mem_init(void) { bitsetInit(blocks, NUM_BLOCKS, 0); }
 
 void *mem_alloc(size_t size) {
-    char req_order = calc_order(size);
-    if (req_order > ORDER_MAX) goto fail;
-    int req_blocks = 1 << req_order;
+    char required_order = calculate_order(size);
+    if (required_order > ORDER_MAX) {
+        errno = ENOMEM;
+        return NULL;
+    }
 
-    // search for smallest block that can accommodate
+    int required_pages = 1 << required_order;
     char best_order = ORDER_MAX + 1;
-    int best_block_idx = -1;
+    int best_index = -1;
 
-    int block_idx = 0;
-    while (block_idx + req_blocks < NUM_BLOCKS) {
-        if (is_free(blocks, block_idx, req_blocks)) {
-            char block_order = get_block_order(blocks, block_idx);
-
-            if (block_order < best_order) {
-                best_order = block_order;
-                best_block_idx = block_idx;
+    for (int idx = 0; idx + required_pages <= NUM_BLOCKS;) {
+        if (is_range_free(blocks, idx, required_pages)) {
+            char current_order = find_buddy_order(blocks, idx);
+            if (current_order >= required_order && current_order < best_order) {
+                best_order = current_order;
+                best_index = idx;
+                if (best_order == required_order) {
+                    break;
+                }
             }
-            if (block_order == req_order) break;
 
-            // TODO: make this more readable
-            if (block_order > req_order) {
-                block_order = req_order;
+            if (current_order > -1) {
+                idx += (1 << current_order);
+            } else {
+                idx++;
             }
-            char rel_block_order = req_order - block_order;
-            block_idx += (1 << rel_block_order) * req_blocks;
         } else {
-            block_idx += req_blocks;
+            idx++;
         }
     }
 
-    if (best_block_idx == -1) goto fail;
-
-    // block found! -> allocate memory
-    for (int i = best_block_idx; i < best_block_idx + req_blocks; i++) {
-        bitsetSet(blocks, i);
+    if (best_index == -1) {
+        errno = ENOMEM;
+        return NULL;
     }
 
-    int header_idx = best_block_idx * PAGE_SIZE;
-    heap[header_idx] = req_order;
+    for (int i = 0; i < required_pages; i++) {
+        bitsetSet(blocks, best_index + i);
+    }
 
-    return &heap[header_idx + HEADER_SIZE];
-
-fail:
-    errno = ENOMEM;
-    return NULL;
+    heap[best_index * PAGE_SIZE] = required_order;
+    return &heap[best_index * PAGE_SIZE + HEADER_SIZE];
 }
 
-void *mem_realloc(void *oldptr, size_t new_size) {
-    /* TODO: increase the size of an existing block through merging
-     *   OR  allocate a new one with identical contents */
-fail:
-    errno = ENOMEM;
-    return NULL;
+void *mem_realloc(void *ptr, size_t new_size) {
+    if (!ptr) {
+        return mem_alloc(new_size);
+    }
+
+    if (new_size == 0) {
+        mem_free(ptr);
+        return NULL;
+    }
+
+    char old_order = *((char *)ptr - HEADER_SIZE);
+    size_t old_size = ((size_t)1 << old_order) * PAGE_SIZE - HEADER_SIZE;
+
+    if (new_size <= old_size) {
+        return ptr;
+    }
+
+    void *new_ptr = mem_alloc(new_size);
+    if (!new_ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    memcpy(new_ptr, ptr, old_size);
+    mem_free(ptr);
+    return new_ptr;
 }
 
 void mem_free(void *ptr) {
-    // TODO: check for validity of pointer
+    if (!ptr) {
+        return;
+    }
 
     char order = *((char *)ptr - HEADER_SIZE);
     int free_blocks = 1 << order;
+    int block_idx = ((char *)ptr - heap - HEADER_SIZE) / PAGE_SIZE;
 
-    int block_idx = ((char *)ptr - &heap[0]) / 64;
+    if (block_idx < 0 || block_idx + free_blocks > NUM_BLOCKS) {
+        return;
+    }
+
+    for (int i = 0; i < free_blocks; i++) {
+        if (!bitsetGet(blocks, block_idx + i)) {
+            return;
+        }
+    }
 
     for (int i = 0; i < free_blocks; i++) {
         bitsetClear(blocks, block_idx + i);
