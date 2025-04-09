@@ -1,26 +1,37 @@
-Repository für die Übung zum Modul [Betriebssysteme 1][betriebssysteme1_link]
+# Operating Systems Projects
 
-## Reference Machine
+This repository contains several projects developed during the "Betriebssysteme I" (_Operating Systems I_) course in my Computer Science studies.
 
-- **OS:** openSUSE Leap 15.5 (on x86_64)
-- **Build Tools:** GCC 7.5.0 (from SUSE Linux), GNU Make 4.2.1
+## The Projects
 
-## Build Instructions
+- **Bootloader:**  
+  A demonstration "bootloader" written in C with inline assembly that simulates the boot process. It briefly switches to 16-bit mode, displays a greeting (“Hello!”), and accepts basic user input. Although it isn’t really a fully functional bootloader, it helped understand key concepts of bootstrapping and BIOS interrupt handling.
 
-1. **Clone the repository:**
-    ```sh
-    git clone github.com/axkoro/bs
-    cd bs
-    ```
+- **Memory Allocator:**  
+  A custom dynamic memory manager implemented with a buddy allocation strategy on a fixed-size heap. It allocates, reallocates, and frees memory blocks by tracking usage via a bitset, and provides a function to dump the current memory state for debugging purposes.
 
-2. **Build the project:**
-    ```sh
-    make all
-    ```
+- **Shell:**  
+  A custom shell that supports built-in commands (`exit`, `cd`, and `wait`) and the execution of external programs. It handles asynchronous execution using the `&` operator and correctly forwards SIGINT to running processes.
 
-3. **Run the project:**
-    ```sh
-    make run
-    ```
+- **Network Shell:**  
+  A network-based shell that creates a remote command-line interface using TCP sockets. It supports file transfers via put (and an incomplete get command) and uses POSIX threads to manage multiple clients. Unfortunately, I didn't fully finish that project.
 
-[betriebssysteme1_link]: https://qis.hu-berlin.de/lupo/rds?state=verpublish&status=init&vmfile=no&moduleCall=webInfo&publishConfFile=webInfo&publishSubDir=veranstaltung&veranstaltung.veranstid=221454
+## Setup and Execution
+
+Each project includes its own Makefile. To run any project, navigate to the respective project directory and execute:
+
+```bash
+make run
+```
+
+The client and server instances of the network shell should be run in two different terminal instances. You can do this by first compiling via:
+
+```bash
+make all
+```
+
+And then running manually:
+
+```bash
+./client # or ./server, respectively
+```
